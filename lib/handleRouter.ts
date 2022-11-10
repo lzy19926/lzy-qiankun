@@ -8,7 +8,7 @@ import type { AppConfig } from './interface'
 let currentApp: AppConfig | undefined = undefined;
 
 
-export async function handleRouterChange() {    
+export async function handleRouterChange() {
     // 1. 卸载上一次的应用
     const prevApp = currentApp
     if (prevApp) {
@@ -18,7 +18,7 @@ export async function handleRouterChange() {
     // 2. 匹配子应用  
     const apps = getApps()
 
-    
+
     // 从apps中查找对应activeRule的路由
     const app = apps.find(item => window.location.pathname.startsWith(item.activeRule))
     currentApp = app
@@ -36,7 +36,7 @@ export async function handleRouterChange() {
 
     // 4.加载子应用  从入口请求到该应用的html css js等资源  执行
     // 子应用通过webpack启动后,会打包并在3000端口放置对应的html,css,js等资源,从该端口请求资源
-    const { htmlTemplate, getExternalScripts, callScripts } = await importHtml(app.entry)
+    const { htmlTemplate, getExternalScripts, getExternalStylesheet, callScripts } = await importHtml(app.entry)
 
 
     // 5 解析html 获取并执行JS代码 获得导出的三个生命周期函数 将其放到app对象中
@@ -46,12 +46,19 @@ export async function handleRouterChange() {
     app.mount = appExports.mount
     app.unmount = appExports.unmount
 
-    // 6 渲染子应用
+    // 6 解析html 获取并执行CSS代码 
+    const styleSheets = await getExternalStylesheet()
+    app.styleSheets = styleSheets
+
+
+    // 7 渲染子应用
     bootstarpApp(app)
     mountApp(app)
 }
 
 
+
+let shadowRoot: ShadowRoot;
 //todo 三个App生命周期逻辑
 async function bootstarpApp(app: AppConfig) {
     app.bootstarp && await app.bootstarp()
@@ -59,12 +66,40 @@ async function bootstarpApp(app: AppConfig) {
 
 //todo mount时将pros.container传递进去 渲染到对应的容器中
 async function mountApp(app: AppConfig) {
-    const container = document.querySelector(app.container) // 获取容器div
+
+    let shadowDomContainer = document.querySelector(app.container) // 获取外层容器div作为shadowDomContainer
+
+    if (!shadowDomContainer) { // 没有则创建一个container
+        shadowDomContainer = document.createElement('div')
+        shadowDomContainer.setAttribute('id', app.container)
+        document.appendChild(shadowDomContainer)
+    }
+
+    const container = document.createElement('div')// 创建应用的container
+
+    if(!shadowRoot){// 创建应用的shadowRoot
+        shadowRoot = shadowDomContainer.attachShadow({ mode: 'open' })
+    }
+
     app.mount && await app.mount({ container })
+
+    // 给shadowDom注入styles
+    // 使用shadowDom作为沙箱隔离    
+    app.styleSheets.map((cssCode: string) => {
+        let styleAttr = document.createElement('style')
+        styleAttr.textContent = cssCode
+        shadowRoot.appendChild(styleAttr)
+    })
+
+    shadowRoot.appendChild(container)
 }
 
 //todo unmount时将pros.container传递进去 渲染到对应的容器中
 async function unmountApp(app: AppConfig) {
     const container = document.querySelector(app.container) // 获取容器div
     app.unmount && await app.unmount({ container })
+
+    while (shadowRoot.firstChild) {
+        shadowRoot.firstChild.remove();
+      }
 }

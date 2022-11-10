@@ -20,11 +20,11 @@ function importHtml(url) {
         const html = yield fetch(url).then(res => res.text());
         const htmlTemplate = document.createElement('div');
         htmlTemplate.innerHTML = html;
-        const scripts = htmlTemplate.querySelectorAll('script');
         // 获取script标签 及其内容代码  (两种script)
         // 从标签中获取src属性 请求  或者直接获取innerHTML
         // 需要将结果数组包裹为Promise,使用.all进行处理
         function getExternalScripts() {
+            const scripts = htmlTemplate.querySelectorAll('script');
             const resList = Array.from(scripts).map((script) => {
                 const src = script.getAttribute('src');
                 if (!src) { //TODO 直接将内部JS代码用Promise包裹返回
@@ -43,11 +43,39 @@ function importHtml(url) {
             });
             return Promise.all(resList);
         }
+        function getExternalStylesheet() {
+            const styles = [];
+            const links = htmlTemplate.querySelectorAll('link');
+            // 收集styleSheet
+            Array.from(links).forEach((link) => {
+                if (link.getAttribute('rel') === 'stylesheet') {
+                    styles.push(link);
+                }
+            });
+            const resList = styles.map((link) => {
+                const href = link.getAttribute('href');
+                if (!href) { //TODO 直接将内部JS代码用Promise包裹返回
+                    return Promise.resolve(link.innerHTML);
+                }
+                else { //TODO 解析src 请求代码 返回结果Promise(需要对src做处理 查看是否是http开头的)
+                    let cssURL = href.startsWith('http') ? href : url + href;
+                    if (href.startsWith('http')) {
+                        cssURL = href;
+                    }
+                    else if (href.startsWith('.')) {
+                        cssURL = url + href.slice(1);
+                    }
+                    console.log('请求css资源');
+                    return fetch(cssURL).then(res => res.text());
+                }
+            });
+            return Promise.all(resList);
+        }
         //todo 获取并执行代码执行这些代码(获取生命周期钩子)
         //TODO 获取code中webpack导出的factory函数 思路在最下方
         function callScripts() {
             return __awaiter(this, void 0, void 0, function* () {
-                const scriptsCode = yield getExternalScripts(); // `console.log(1)`
+                const scriptsCode = yield getExternalScripts();
                 // 手动构建cjs环境
                 const module = { exports: {} };
                 const exports = module.exports;
@@ -57,13 +85,13 @@ function importHtml(url) {
                     eval(code);
                 });
                 // 此时module.exports就有了factory()的结果,也就是子应用入口中导出的三个生命周期钩子
-                //console.log(module.exports);
                 return module.exports;
             });
         }
         return {
             htmlTemplate,
             getExternalScripts,
+            getExternalStylesheet,
             callScripts,
         };
     });

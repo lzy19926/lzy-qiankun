@@ -11,12 +11,11 @@ export async function importHtml(url: string) {
     const htmlTemplate = document.createElement('div')
     htmlTemplate.innerHTML = html
 
-    const scripts = htmlTemplate.querySelectorAll('script')
-    
     // 获取script标签 及其内容代码  (两种script)
     // 从标签中获取src属性 请求  或者直接获取innerHTML
     // 需要将结果数组包裹为Promise,使用.all进行处理
     function getExternalScripts() {
+        const scripts = htmlTemplate.querySelectorAll('script')
 
         const resList = Array.from(scripts).map((script: HTMLScriptElement) => {
             const src = script.getAttribute('src')
@@ -37,11 +36,41 @@ export async function importHtml(url: string) {
         return Promise.all(resList)
     }
 
+    function getExternalStylesheet(){
+        const styles:HTMLLinkElement[] = []
+        const links = htmlTemplate.querySelectorAll('link')
+        // 收集styleSheet
+        Array.from(links).forEach((link:HTMLLinkElement)=>{
+            if(link.getAttribute('rel')==='stylesheet'){
+                styles.push(link)
+            }
+        })
+        
+        const resList = styles.map((link:HTMLLinkElement) => {
+            const href = link.getAttribute('href')
+            if (!href) { //TODO 直接将内部JS代码用Promise包裹返回
+                return Promise.resolve(link.innerHTML)
+            } else {    //TODO 解析src 请求代码 返回结果Promise(需要对src做处理 查看是否是http开头的)
+                let cssURL = href.startsWith('http') ? href : url + href
+                if(href.startsWith('http')){
+                    cssURL = href
+                }else if(href.startsWith('.')){
+                    cssURL = url + href.slice(1)
+                }
+                console.log('请求css资源');
+                
+                return fetch(cssURL).then(res => res.text())
+            }
+        })
+
+        return Promise.all(resList)
+    }
+
     //todo 获取并执行代码执行这些代码(获取生命周期钩子)
     //TODO 获取code中webpack导出的factory函数 思路在最下方
     async function callScripts() {
 
-        const scriptsCode = await getExternalScripts() // `console.log(1)`
+        const scriptsCode = await getExternalScripts()
 
         // 手动构建cjs环境
         const module = { exports: {} }
@@ -50,17 +79,17 @@ export async function importHtml(url: string) {
         scriptsCode.forEach((code: string) => {
             //todo 注意 eval执行的代码可以访问外部变量 (自定义的module)
             // 执行后 会将factory()接入exports中            
-            eval(code)
+            eval(code)            
         })
 
         // 此时module.exports就有了factory()的结果,也就是子应用入口中导出的三个生命周期钩子
-        //console.log(module.exports);
         return module.exports
     }
 
     return {
         htmlTemplate,
         getExternalScripts,
+        getExternalStylesheet,
         callScripts,
     }
 }

@@ -13,5 +13,6 @@ export type AppConfig = {
     activeRule: string,
     bootstarp: Function,
     mount: Function,
-    unmount: Function
+    unmount: Function,
+    styleSheets: string[]
 }
