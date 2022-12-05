@@ -16,22 +16,23 @@ exports.handleRouterChange = void 0;
 const index_1 = require("./index");
 const importHtml_1 = require("./importHtml");
 let currentApp = undefined;
+let shadowRootMap = {};
 function handleRouterChange() {
     return __awaiter(this, void 0, void 0, function* () {
-        // 1. 卸载上一次的应用
-        const prevApp = currentApp;
-        if (prevApp) {
-            unmountApp(prevApp);
-        }
-        // 2. 匹配子应用  
+        // 1. 匹配子应用  
         const apps = (0, index_1.getApps)();
         // 从apps中查找对应activeRule的路由
         // 匹配hash和history路由
+        const prevApp = currentApp;
         const app = apps.find(item => window.location.pathname.startsWith(item.activeRule)) ||
             apps.find(item => ('/' + window.location.hash).startsWith(item.activeRule));
         // 未匹配到子应用时不进行处理
         if (!app)
             return;
+        // 2.如果两次渲染到同一个节点 卸载上一次的应用
+        if (prevApp && prevApp.container === app.container) {
+            unmountApp(prevApp);
+        }
         currentApp = app;
         console.log('路由变化,匹配app', app);
         // 3. 提供全局变量  让子应用之道自己是在微前端中执行 渲染到对应的容器中
@@ -73,14 +74,19 @@ function mountApp(app) {
         }
         // 创建应用的container
         const container = document.createElement('div');
-        // 创建应用的shadowRoot
-        if (!app.shadowRoot) {
+        // 有dom存在时  不进行渲染
+        const hasShadowDom = (shadowDomContainer === null || shadowDomContainer === void 0 ? void 0 : shadowDomContainer.getAttribute('hasShadowDom')) === 'true' ? true : false;
+        if (hasShadowDom)
+            return;
+        // 获取/创建应用的shadowRoot
+        if (!shadowRootMap[app.container]) {
             shadowRoot = shadowDomContainer.attachShadow({ mode: 'open' });
-            app.shadowRoot = shadowRoot;
+            shadowRootMap[app.container] = shadowRoot;
         }
         else {
-            shadowRoot = app.shadowRoot;
+            shadowRoot = shadowRootMap[app.container];
         }
+        shadowDomContainer.setAttribute('hasShadowDom', 'true'); // 标记有shadowDom内容
         app.mount && container && (yield app.mount({ container }));
         // 给shadowDom注入styles
         // 使用shadowDom作为沙箱隔离    
@@ -95,9 +101,13 @@ function mountApp(app) {
 //todo unmount时将pros.container传递进去 渲染到对应的容器中
 function unmountApp(app) {
     return __awaiter(this, void 0, void 0, function* () {
-        const shadowRoot = app.shadowRoot;
+        const shadowRoot = shadowRootMap[app.container];
         const container = document.querySelector(app.container); // 获取容器div
+        const hasShadowDom = (container === null || container === void 0 ? void 0 : container.getAttribute('hasShadowDom')) === 'true' ? true : false;
+        if (!hasShadowDom)
+            return; // 容器中无内容则不进行操作
         app.unmount && container && (yield app.unmount({ container }));
+        container === null || container === void 0 ? void 0 : container.setAttribute('hasShadowDom', 'false'); // 标记清除shadowDom内容
         //todo 创建新container 替换老的  用于删除shadowDom(方案2)
         // const id = container?.getAttribute('id') || ''
         // const parentDom = container?.parentElement

@@ -6,28 +6,28 @@ import { importHtml } from './importHtml'
 import type { AppConfig } from './interface'
 
 let currentApp: AppConfig | undefined = undefined;
+let shadowRootMap: Record<string, ShadowRoot> = {};
 
 
 export async function handleRouterChange() {
-    // 1. 卸载上一次的应用
-    const prevApp = currentApp
-    if (prevApp) {
-        unmountApp(prevApp)
-    }
-
-    // 2. 匹配子应用  
+    // 1. 匹配子应用  
     const apps = getApps()
-
 
     // 从apps中查找对应activeRule的路由
     // 匹配hash和history路由
+    const prevApp = currentApp
     const app =
         apps.find(item => window.location.pathname.startsWith(item.activeRule)) ||
         apps.find(item => ('/' + window.location.hash).startsWith(item.activeRule))
 
-
     // 未匹配到子应用时不进行处理
     if (!app) return
+
+    // 2.如果两次渲染到同一个节点 卸载上一次的应用
+    if (prevApp && prevApp.container === app.container) {
+        unmountApp(prevApp)
+    }
+
     currentApp = app
     console.log('路由变化,匹配app', app);
 
@@ -59,8 +59,6 @@ export async function handleRouterChange() {
 }
 
 
-
-
 //todo 三个App生命周期逻辑
 async function bootstarpApp(app: AppConfig) {
     app.bootstarp && await app.bootstarp()
@@ -82,15 +80,19 @@ async function mountApp(app: AppConfig) {
     // 创建应用的container
     const container = document.createElement('div')
 
-    // 创建应用的shadowRoot
-    if (!app.shadowRoot) {
+    // 有dom存在时  不进行渲染
+    const hasShadowDom = shadowDomContainer?.getAttribute('hasShadowDom') === 'true' ? true : false
+    if (hasShadowDom) return
+
+    // 获取/创建应用的shadowRoot
+    if (!shadowRootMap[app.container]) {
         shadowRoot = shadowDomContainer.attachShadow({ mode: 'open' })
-        app.shadowRoot = shadowRoot
+        shadowRootMap[app.container] = shadowRoot
     } else {
-        shadowRoot = app.shadowRoot
+        shadowRoot = shadowRootMap[app.container]
     }
 
-
+    shadowDomContainer.setAttribute('hasShadowDom', 'true')// 标记有shadowDom内容
     app.mount && container && await app.mount({ container })
 
     // 给shadowDom注入styles
@@ -106,10 +108,15 @@ async function mountApp(app: AppConfig) {
 
 //todo unmount时将pros.container传递进去 渲染到对应的容器中
 async function unmountApp(app: AppConfig) {
-    const shadowRoot = app.shadowRoot
+    const shadowRoot = shadowRootMap[app.container]
     const container = document.querySelector(app.container) // 获取容器div
+    const hasShadowDom = container?.getAttribute('hasShadowDom') === 'true' ? true : false
+
+    if (!hasShadowDom) return // 容器中无内容则不进行操作
 
     app.unmount && container && await app.unmount({ container })
+
+    container?.setAttribute('hasShadowDom', 'false')// 标记清除shadowDom内容
 
     //todo 创建新container 替换老的  用于删除shadowDom(方案2)
     // const id = container?.getAttribute('id') || ''

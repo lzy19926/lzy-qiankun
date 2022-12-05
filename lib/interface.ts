@@ -14,6 +14,5 @@ export type AppConfig = {
     bootstarp: Function,
     mount: Function,
     unmount: Function,
-    styleSheets: string[],
-    shadowRoot: ShadowRoot
+    styleSheets: string[]
 }
