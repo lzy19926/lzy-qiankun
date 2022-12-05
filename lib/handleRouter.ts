@@ -60,7 +60,7 @@ export async function handleRouterChange() {
 
 
 
-let shadowRoot: ShadowRoot;
+
 //todo 三个App生命周期逻辑
 async function bootstarpApp(app: AppConfig) {
     app.bootstarp && await app.bootstarp()
@@ -68,6 +68,7 @@ async function bootstarpApp(app: AppConfig) {
 
 //todo mount时将pros.container传递进去 渲染到对应的容器中
 async function mountApp(app: AppConfig) {
+    let shadowRoot: ShadowRoot;
 
     // 获取外层容器div作为shadowDomContainer
     let shadowDomContainer =
@@ -80,8 +81,15 @@ async function mountApp(app: AppConfig) {
 
     // 创建应用的container
     const container = document.createElement('div')
+
     // 创建应用的shadowRoot
-    shadowRoot = shadowDomContainer.attachShadow({ mode: 'open' })
+    if (!app.shadowRoot) {
+        shadowRoot = shadowDomContainer.attachShadow({ mode: 'open' })
+        app.shadowRoot = shadowRoot
+    } else {
+        shadowRoot = app.shadowRoot
+    }
+
 
     app.mount && container && await app.mount({ container })
 
@@ -98,6 +106,7 @@ async function mountApp(app: AppConfig) {
 
 //todo unmount时将pros.container传递进去 渲染到对应的容器中
 async function unmountApp(app: AppConfig) {
+    const shadowRoot = app.shadowRoot
     const container = document.querySelector(app.container) // 获取容器div
 
     app.unmount && container && await app.unmount({ container })

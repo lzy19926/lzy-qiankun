@@ -55,7 +55,6 @@ function handleRouterChange() {
     });
 }
 exports.handleRouterChange = handleRouterChange;
-let shadowRoot;
 //todo 三个App生命周期逻辑
 function bootstarpApp(app) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -65,6 +64,7 @@ function bootstarpApp(app) {
 //todo mount时将pros.container传递进去 渲染到对应的容器中
 function mountApp(app) {
     return __awaiter(this, void 0, void 0, function* () {
+        let shadowRoot;
         // 获取外层容器div作为shadowDomContainer
         let shadowDomContainer = document.querySelector(app.container) ||
             document.getElementById(app.container);
@@ -74,7 +74,13 @@ function mountApp(app) {
         // 创建应用的container
         const container = document.createElement('div');
         // 创建应用的shadowRoot
-        shadowRoot = shadowDomContainer.attachShadow({ mode: 'open' });
+        if (!app.shadowRoot) {
+            shadowRoot = shadowDomContainer.attachShadow({ mode: 'open' });
+            app.shadowRoot = shadowRoot;
+        }
+        else {
+            shadowRoot = app.shadowRoot;
+        }
         app.mount && container && (yield app.mount({ container }));
         // 给shadowDom注入styles
         // 使用shadowDom作为沙箱隔离    
@@ -89,6 +95,7 @@ function mountApp(app) {
 //todo unmount时将pros.container传递进去 渲染到对应的容器中
 function unmountApp(app) {
     return __awaiter(this, void 0, void 0, function* () {
+        const shadowRoot = app.shadowRoot;
         const container = document.querySelector(app.container); // 获取容器div
         app.unmount && container && (yield app.unmount({ container }));
         //todo 创建新container 替换老的  用于删除shadowDom(方案2)
