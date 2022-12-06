@@ -1,14 +1,15 @@
 
 type Proxy = /*unresolved*/ any
 
+
 export default class ProxySandbox {
 
-    proxy: Proxy
+    proxyWindow: Proxy
     sandboxRunning: boolean
     constructor() {
         const rawWindow = window;
         const fakeWindow = {};
-        const proxy = new Proxy(fakeWindow, {
+        const proxyWindow = new Proxy(fakeWindow, {
             set: (target: any, prop: any, value: any) => {
                 if (this.sandboxRunning) {
                     target[prop] = value;
@@ -24,7 +25,7 @@ export default class ProxySandbox {
             }
         })
         this.sandboxRunning = false
-        this.proxy = proxy;
+        this.proxyWindow = proxyWindow;
     }
 
     active() {
@@ -43,7 +44,7 @@ export default class ProxySandbox {
 //   let proxy1 = new ProxySandbox();
 //   let proxy2 = new ProxySandbox();
   
-//   ((window) => {
+//   ((window) => {/。
 //       proxy1.active();
 //       console.log('修改前proxy1的sex', window.sex);// 男
 //       window.sex = '女';

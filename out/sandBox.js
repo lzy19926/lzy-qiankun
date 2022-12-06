@@ -4,7 +4,7 @@ class ProxySandbox {
     constructor() {
         const rawWindow = window;
         const fakeWindow = {};
-        const proxy = new Proxy(fakeWindow, {
+        const proxyWindow = new Proxy(fakeWindow, {
             set: (target, prop, value) => {
                 if (this.sandboxRunning) {
                     target[prop] = value;
@@ -21,7 +21,7 @@ class ProxySandbox {
             }
         });
         this.sandboxRunning = false;
-        this.proxy = proxy;
+        this.proxyWindow = proxyWindow;
     }
     active() {
         this.sandboxRunning = true;
@@ -34,7 +34,7 @@ exports.default = ProxySandbox;
 //todo-----------------使用方式
 //   let proxy1 = new ProxySandbox();
 //   let proxy2 = new ProxySandbox();
-//   ((window) => {
+//   ((window) => {/。
 //       proxy1.active();
 //       console.log('修改前proxy1的sex', window.sex);// 男
 //       window.sex = '女';

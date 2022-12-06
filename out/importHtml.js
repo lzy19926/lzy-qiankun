@@ -79,10 +79,17 @@ function importHtml(url) {
                 // 手动构建cjs环境
                 const module = { exports: {} };
                 const exports = module.exports;
-                //todo 给脚本注入沙箱隔离window
                 scriptsCode.forEach((code) => {
                     //! 注意 eval执行的代码可以访问外部变量 (自定义的module)
                     // 执行后 会将factory()接入exports中  
+                    //todo 给脚本注入沙箱隔离window 并启动沙箱(因为使用了bootStarp 需要使用原始的快照沙箱)
+                    //问题很大 暂时不开发
+                    // let sandbox = new ProxySandbox();
+                    // let jsCode =`
+                    // ((window)=>{
+                    //     ${code}
+                    // })(window)
+                    // `            
                     eval(code);
                 });
                 // 此时module.exports就有了factory()的结果,也就是子应用入口中导出的三个生命周期钩子

@@ -4,8 +4,6 @@
 // 这里简易实现一下import-html-entry库
 
 
-import ProxySandbox from './sandBox'
-
 // 通过url获取html,并返回js,html,执行js的方法
 export async function importHtml(url: string) {
 
@@ -79,12 +77,21 @@ export async function importHtml(url: string) {
         const module = { exports: {} }
         const exports = module.exports
 
-        //todo 给脚本注入沙箱隔离window
-       
-
+     
         scriptsCode.forEach((code: string) => {
             //! 注意 eval执行的代码可以访问外部变量 (自定义的module)
             // 执行后 会将factory()接入exports中  
+           
+            //todo 给脚本注入沙箱隔离window 并启动沙箱(因为使用了bootStarp 需要使用原始的快照沙箱)
+            //问题很大 暂时不开发
+            // let sandbox = new ProxySandbox();
+            // let jsCode =`
+            // ((window)=>{
+            //     ${code}
+            // })(window)
+            // `            
+
+
             eval(code)            
         })
 
