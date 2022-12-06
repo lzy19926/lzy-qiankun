@@ -41,6 +41,7 @@ export async function handleRouterChange() {
     const { htmlTemplate, getExternalScripts, getExternalStylesheet, callScripts } = await importHtml(app.entry)
 
 
+
     // 5 解析html 获取并执行JS代码 获得导出的三个生命周期函数 将其放到app对象中
     const appExports: any = await callScripts()
 
@@ -56,6 +57,7 @@ export async function handleRouterChange() {
     // 7 渲染子应用
     bootstarpApp(app)
     mountApp(app)
+
 }
 
 
@@ -69,41 +71,33 @@ async function mountApp(app: AppConfig) {
     let shadowRoot: ShadowRoot;
 
     // 获取外层容器div作为shadowDomContainer
-    let shadowDomContainer =
+    let shadowRootContainer =
         document.querySelector(app.container) ||
         document.getElementById(app.container)
 
-    if (!shadowDomContainer) { // 没有则创建一个container
+    if (!shadowRootContainer) { // 没有则创建一个container
         return console.error('未指定微前端容器')
     }
 
-    // 创建应用的container
-    const container = document.createElement('div')
-
     // 有dom存在时  不进行渲染
-    const hasShadowDom = shadowDomContainer?.getAttribute('hasShadowDom') === 'true' ? true : false
+    const hasShadowDom = shadowRootContainer?.getAttribute('hasShadowDom') === 'true' ? true : false
     if (hasShadowDom) return
 
     // 获取/创建应用的shadowRoot
     if (!shadowRootMap[app.container]) {
-        shadowRoot = shadowDomContainer.attachShadow({ mode: 'open' })
+        shadowRoot = shadowRootContainer.attachShadow({ mode: 'open' })
         shadowRootMap[app.container] = shadowRoot
     } else {
         shadowRoot = shadowRootMap[app.container]
     }
 
-    shadowDomContainer.setAttribute('hasShadowDom', 'true')// 标记有shadowDom内容
-    app.mount && container && await app.mount({ container })
+    // 渲染
+    const microDocument = await createShadowDocument(app)
 
-    // 给shadowDom注入styles
-    // 使用shadowDom作为沙箱隔离    
-    app.styleSheets.map((cssCode: string) => {
-        let styleAttr = document.createElement('style')
-        styleAttr.textContent = cssCode
-        shadowRoot.appendChild(styleAttr)
-    })
+    shadowRoot.appendChild(microDocument)
 
-    shadowRoot.appendChild(container)
+    // 标记有shadowDom内容渲染完毕
+    shadowRootContainer.setAttribute('hasShadowDom', 'true')
 }
 
 //todo unmount时将pros.container传递进去 渲染到对应的容器中
@@ -131,6 +125,24 @@ async function unmountApp(app: AppConfig) {
     }
 }
 
+
+// 渲染应用到shadowDocument中
+async function createShadowDocument(app: AppConfig) {
+    // 创建应用的container
+    const microDocument = document.createElement('html')
+    const container = document.createElement('div')
+    // 渲染应用到html内
+    app.mount && container && await app.mount({ container })
+    microDocument.appendChild(container)
+    // 给shadowDom注入styles 使用shadowDom作为沙箱隔离  
+    app.styleSheets.map((cssCode: string) => {
+        let styleAttr = document.createElement('style')
+        styleAttr.textContent = cssCode
+        microDocument.appendChild(styleAttr)
+    })
+
+    return microDocument
+}
 
 
 //! 问题 在hash模式下 刷新后如果没有shadowRoot,无法正常删除dom元素

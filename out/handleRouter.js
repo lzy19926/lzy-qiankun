@@ -67,35 +67,28 @@ function mountApp(app) {
     return __awaiter(this, void 0, void 0, function* () {
         let shadowRoot;
         // 获取外层容器div作为shadowDomContainer
-        let shadowDomContainer = document.querySelector(app.container) ||
+        let shadowRootContainer = document.querySelector(app.container) ||
             document.getElementById(app.container);
-        if (!shadowDomContainer) { // 没有则创建一个container
+        if (!shadowRootContainer) { // 没有则创建一个container
             return console.error('未指定微前端容器');
         }
-        // 创建应用的container
-        const container = document.createElement('div');
         // 有dom存在时  不进行渲染
-        const hasShadowDom = (shadowDomContainer === null || shadowDomContainer === void 0 ? void 0 : shadowDomContainer.getAttribute('hasShadowDom')) === 'true' ? true : false;
+        const hasShadowDom = (shadowRootContainer === null || shadowRootContainer === void 0 ? void 0 : shadowRootContainer.getAttribute('hasShadowDom')) === 'true' ? true : false;
         if (hasShadowDom)
             return;
         // 获取/创建应用的shadowRoot
         if (!shadowRootMap[app.container]) {
-            shadowRoot = shadowDomContainer.attachShadow({ mode: 'open' });
+            shadowRoot = shadowRootContainer.attachShadow({ mode: 'open' });
             shadowRootMap[app.container] = shadowRoot;
         }
         else {
             shadowRoot = shadowRootMap[app.container];
         }
-        shadowDomContainer.setAttribute('hasShadowDom', 'true'); // 标记有shadowDom内容
-        app.mount && container && (yield app.mount({ container }));
-        // 给shadowDom注入styles
-        // 使用shadowDom作为沙箱隔离    
-        app.styleSheets.map((cssCode) => {
-            let styleAttr = document.createElement('style');
-            styleAttr.textContent = cssCode;
-            shadowRoot.appendChild(styleAttr);
-        });
-        shadowRoot.appendChild(container);
+        // 渲染
+        const microDocument = yield createShadowDocument(app);
+        shadowRoot.appendChild(microDocument);
+        // 标记有shadowDom内容渲染完毕
+        shadowRootContainer.setAttribute('hasShadowDom', 'true');
     });
 }
 //todo unmount时将pros.container传递进去 渲染到对应的容器中
@@ -118,6 +111,24 @@ function unmountApp(app) {
         while (shadowRoot.firstChild) {
             shadowRoot.firstChild.remove();
         }
+    });
+}
+// 渲染应用到shadowDocument中
+function createShadowDocument(app) {
+    return __awaiter(this, void 0, void 0, function* () {
+        // 创建应用的container
+        const microDocument = document.createElement('html');
+        const container = document.createElement('div');
+        // 渲染应用到html内
+        app.mount && container && (yield app.mount({ container }));
+        microDocument.appendChild(container);
+        // 给shadowDom注入styles 使用shadowDom作为沙箱隔离  
+        app.styleSheets.map((cssCode) => {
+            let styleAttr = document.createElement('style');
+            styleAttr.textContent = cssCode;
+            microDocument.appendChild(styleAttr);
+        });
+        return microDocument;
     });
 }
 //! 问题 在hash模式下 刷新后如果没有shadowRoot,无法正常删除dom元素

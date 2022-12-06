@@ -3,6 +3,9 @@
 //todo  乾坤中使用import-html-entry库  用来通过html字符串,获取对应的html模板,js代码内容,css内容
 // 这里简易实现一下import-html-entry库
 
+
+import ProxySandbox from './sandBox'
+
 // 通过url获取html,并返回js,html,执行js的方法
 export async function importHtml(url: string) {
 
@@ -76,9 +79,12 @@ export async function importHtml(url: string) {
         const module = { exports: {} }
         const exports = module.exports
 
+        //todo 给脚本注入沙箱隔离window
+       
+
         scriptsCode.forEach((code: string) => {
-            //todo 注意 eval执行的代码可以访问外部变量 (自定义的module)
-            // 执行后 会将factory()接入exports中            
+            //! 注意 eval执行的代码可以访问外部变量 (自定义的module)
+            // 执行后 会将factory()接入exports中  
             eval(code)            
         })
 

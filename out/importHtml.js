@@ -79,9 +79,10 @@ function importHtml(url) {
                 // 手动构建cjs环境
                 const module = { exports: {} };
                 const exports = module.exports;
+                //todo 给脚本注入沙箱隔离window
                 scriptsCode.forEach((code) => {
-                    //todo 注意 eval执行的代码可以访问外部变量 (自定义的module)
-                    // 执行后 会将factory()接入exports中            
+                    //! 注意 eval执行的代码可以访问外部变量 (自定义的module)
+                    // 执行后 会将factory()接入exports中  
                     eval(code);
                 });
                 // 此时module.exports就有了factory()的结果,也就是子应用入口中导出的三个生命周期钩子
