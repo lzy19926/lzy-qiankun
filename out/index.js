@@ -1,13 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getApps = exports.start = exports.registerMicroApps = void 0;
 const handleRouter_1 = require("./handleRouter");
 let apps = [];
 function registerMicroApps(appConfigs) {
     apps = appConfigs;
     console.log(apps);
 }
-exports.registerMicroApps = registerMicroApps;
 function start() {
     // 乾坤运行原理：
     // 1.监视路由变化
@@ -16,11 +14,10 @@ function start() {
     // 初始执行app匹配
     (0, handleRouter_1.handleRouterChange)();
 }
-exports.start = start;
 function getApps() {
     return apps;
 }
-exports.getApps = getApps;
+exports.default = { registerMicroApps, start, getApps };
 // 重写原生history路由方法  进行监视劫持
 // 1.监视路由变化 hash:window.onhashchange  history:  
 // 监听history.go  back   forward 使用popstate事件  window.onpopstate

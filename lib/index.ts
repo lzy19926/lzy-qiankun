@@ -26,7 +26,7 @@ export function getApps() {
 
 
 
-
+export default { registerMicroApps, start, getApps }
 
 
 // 重写原生history路由方法  进行监视劫持

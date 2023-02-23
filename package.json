@@ -1,8 +1,8 @@
 {
   "name": "lzy-qiankun",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "简易版qiankun微前端框架实现",
+  "main": "./out/index.js",
   "directories": {
     "lib": "lib"
   },
